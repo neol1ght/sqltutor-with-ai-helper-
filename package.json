@@ -1,0 +1,10 @@
+{
+  "name": "sql-trainer-ai",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter web --filter api dev",
+    "build": "pnpm --recursive build",
+    "lint": "pnpm --recursive lint"
+  },
+  "packageManager": "pnpm@10.15.0"
+}
