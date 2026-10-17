@@ -23,6 +23,8 @@ import { AdminSubmissionsController } from './submissions/admin-submissions.cont
 import { AdminSubmissionsService } from './submissions/admin-submissions.service.js';
 import {AdminDashboardController} from "./dashboard/admin-dashboard.controller.js";
 import {AdminDashboardService} from "./dashboard/admin-dashboard.service.js";
+import {AdminExerciseSolutionsController} from "./exercise-solutions/admin-exercise-solutions.controller.js";
+import {AdminExerciseSolutionsService} from "./exercise-solutions/admin-exercise-solutions.service.js";
 
 @Module({
     imports: [
@@ -38,6 +40,7 @@ import {AdminDashboardService} from "./dashboard/admin-dashboard.service.js";
         AdminAchievementsController,
         AdminSubmissionsController,
         AdminDashboardController,
+        AdminExerciseSolutionsController,
     ],
 
     providers: [
@@ -48,6 +51,7 @@ import {AdminDashboardService} from "./dashboard/admin-dashboard.service.js";
         AdminAchievementsService,
         AdminSubmissionsService,
         AdminDashboardService,
+        AdminExerciseSolutionsService
     ],
 })
 export class AdminModule {}

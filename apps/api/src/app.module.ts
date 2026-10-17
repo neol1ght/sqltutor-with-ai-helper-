@@ -13,6 +13,11 @@ import {AiModule} from "./modules/ai/ai.module.js";
 import {HintsModule} from "./modules/hints/hints.module.js";
 import {TelegramModule} from "./modules/telegram/telegram.module.js";
 import {AdminModule} from "./modules/admin/admin.module.js";
+import {ProfileModule} from "./modules/profile/profile.module.js";
+import {DashboardModule} from "./modules/dashboard/dashboard.module.js";
+import { AdminLecturesModule } from './modules/admin/lectures/admin-lectures.module.js';
+import { AdminLearningPathNodesModule } from './modules/admin/learning-path-nodes/admin-learning-path-nodes.module.js';
+import { LearningContentModule } from './modules/learning-content/learning-content.module.js';
 
 @Module({
   imports: [
@@ -28,6 +33,11 @@ import {AdminModule} from "./modules/admin/admin.module.js";
     HintsModule,
     TelegramModule,
     AdminModule,
+    ProfileModule,
+    DashboardModule,
+    AdminLecturesModule,
+    AdminLearningPathNodesModule,
+    LearningContentModule
 
   ],
   controllers: [

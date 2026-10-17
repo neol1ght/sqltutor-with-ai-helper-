@@ -72,6 +72,7 @@ export class SqlService {
             return {
                 success: true,
                 rows: result.rows,
+                columns: result.fields.map((field) => field.name),
                 rowCount: result.rowCount,
             };
         } catch (error: any) {
@@ -271,6 +272,7 @@ export class SqlService {
                 success: true,
                 isCorrect,
                 rows: actualResult.rows,
+                columns: actualResult.fields.map((field) => field.name),
                 rowCount: actualResult.rowCount,
                 submissionId: submission.id,
                 unlockedAchievements,

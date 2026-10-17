@@ -6,20 +6,16 @@ datasource db {
   provider = "postgresql"
 }
 
-// =========================
-// USERS
-// =========================
-
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model User {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email        String    @unique @db.VarChar(255)
-  passwordHash String    @map("password_hash") @db.VarChar(255)
-  firstName    String?   @map("first_name") @db.VarChar(100)
-  lastName     String?   @map("last_name") @db.VarChar(100)
-  role         user_role @default(STUDENT)
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
-
+  id                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email              String                 @unique @db.VarChar(255)
+  passwordHash       String                 @map("password_hash") @db.VarChar(255)
+  firstName          String?                @map("first_name") @db.VarChar(100)
+  lastName           String?                @map("last_name") @db.VarChar(100)
+  role               user_role              @default(STUDENT)
+  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime               @default(now()) @map("updated_at") @db.Timestamptz(6)
   aiConversations    AiConversation[]
   refreshTokens      RefreshToken[]
   submissions        Submission[]
@@ -27,13 +23,10 @@ model User {
   telegramLinkTokens TelegramLinkToken[]
   userAchievements   UserAchievement[]
   exerciseProgress   UserExerciseProgress[]
+  lectureProgress    LectureProgress[]
 
   @@map("users")
 }
-
-// =========================
-// REFRESH TOKENS
-// =========================
 
 model RefreshToken {
   id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -42,63 +35,50 @@ model RefreshToken {
   expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
   revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_refresh_tokens_user")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_refresh_tokens_user")
 
   @@index([expiresAt])
   @@index([userId])
   @@map("refresh_tokens")
 }
 
-// =========================
-// LEARNING CASES
-// =========================
-
 model LearningCase {
-  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title        String              @db.VarChar(255)
-  slug         String              @unique @db.VarChar(255)
-  description  String?
-  difficulty   exercise_difficulty @default(EASY)
-  databaseName String              @map("database_name") @db.VarChar(255)
-  isPublished  Boolean             @default(false) @map("is_published")
-  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime            @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  exercises Exercise[]
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title             String              @db.VarChar(255)
+  slug              String              @unique @db.VarChar(255)
+  description       String?
+  difficulty        exercise_difficulty @default(EASY)
+  databaseName      String              @map("database_name") @db.VarChar(255)
+  isPublished       Boolean             @default(false) @map("is_published")
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime            @default(now()) @map("updated_at") @db.Timestamptz(6)
+  exercises         Exercise[]
+  learningPathNodes LearningPathNode[]
 
   @@map("learning_cases")
 }
 
-// =========================
-// EXERCISES
-// =========================
-
 model Exercise {
-  id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  caseId      String              @map("case_id") @db.Uuid
-  title       String              @db.VarChar(255)
-  description String
-  difficulty  exercise_difficulty @default(EASY)
-  sortOrder   Int                 @map("sort_order")
-  isPublished Boolean             @default(false) @map("is_published")
-  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime            @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  learningCase         LearningCase           @relation(fields: [caseId], references: [id], onUpdate: NoAction, map: "fk_exercises_case")
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  caseId               String                 @map("case_id") @db.Uuid
+  title                String                 @db.VarChar(255)
+  description          String
+  difficulty           exercise_difficulty    @default(EASY)
+  sortOrder            Int                    @map("sort_order")
+  isPublished          Boolean                @default(false) @map("is_published")
+  createdAt            DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime               @default(now()) @map("updated_at") @db.Timestamptz(6)
   aiConversations      AiConversation[]
   exerciseHints        ExerciseHint[]
   exerciseSolution     ExerciseSolution?
+  learningCase         LearningCase           @relation(fields: [caseId], references: [id], onUpdate: NoAction, map: "fk_exercises_case")
   submissions          Submission[]
   userExerciseProgress UserExerciseProgress[]
+  learningPathNodes    LearningPathNode[]
 
   @@unique([caseId, sortOrder], map: "exercises_case_sort_order_unique")
   @@map("exercises")
 }
-
-// =========================
-// EXERCISE SOLUTIONS
-// =========================
 
 model ExerciseSolution {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -106,15 +86,10 @@ model ExerciseSolution {
   query      String
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_exercise_solutions_exercise")
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_exercise_solutions_exercise")
 
   @@map("exercise_solutions")
 }
-
-// =========================
-// EXERCISE HINTS
-// =========================
 
 model ExerciseHint {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -122,16 +97,11 @@ model ExerciseHint {
   level      Int
   content    String
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_exercise_hints_exercise")
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_exercise_hints_exercise")
 
   @@unique([exerciseId, level], map: "exercise_hints_level_unique")
   @@map("exercise_hints")
 }
-
-// =========================
-// SUBMISSIONS
-// =========================
 
 model Submission {
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -142,19 +112,14 @@ model Submission {
   executionTimeMs Int?     @map("execution_time_ms")
   errorMessage    String?  @map("error_message")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  exercise Exercise @relation(fields: [exerciseId], references: [id], onUpdate: NoAction, map: "fk_submissions_exercise")
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_submissions_user")
+  exercise        Exercise @relation(fields: [exerciseId], references: [id], onUpdate: NoAction, map: "fk_submissions_exercise")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_submissions_user")
 
   @@index([createdAt])
   @@index([exerciseId])
   @@index([userId])
   @@map("submissions")
 }
-
-// =========================
-// USER EXERCISE PROGRESS
-// =========================
 
 model UserExerciseProgress {
   id            String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -166,36 +131,25 @@ model UserExerciseProgress {
   lastAttemptAt DateTime?                @map("last_attempt_at") @db.Timestamptz(6)
   createdAt     DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime                 @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_progress_exercise")
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_progress_user")
+  exercise      Exercise                 @relation(fields: [exerciseId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_progress_exercise")
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_progress_user")
 
   @@unique([userId, exerciseId], map: "user_exercise_progress_unique")
   @@map("user_exercise_progress")
 }
 
-// =========================
-// AI CONVERSATIONS
-// =========================
-
 model AiConversation {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId     String   @map("user_id") @db.Uuid
-  exerciseId String?  @map("exercise_id") @db.Uuid
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  exercise Exercise? @relation(fields: [exerciseId], references: [id], onUpdate: NoAction, map: "fk_ai_conversations_exercise")
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ai_conversations_user")
-
-  messages AiMessage[]
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String      @map("user_id") @db.Uuid
+  exerciseId String?     @map("exercise_id") @db.Uuid
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime    @default(now()) @map("updated_at") @db.Timestamptz(6)
+  exercise   Exercise?   @relation(fields: [exerciseId], references: [id], onUpdate: NoAction, map: "fk_ai_conversations_exercise")
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ai_conversations_user")
+  messages   AiMessage[]
 
   @@map("ai_conversations")
 }
-
-// =========================
-// AI MESSAGES
-// =========================
 
 model AiMessage {
   id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -203,17 +157,12 @@ model AiMessage {
   role           ai_message_role
   content        String
   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ai_messages_conversation")
+  conversation   AiConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ai_messages_conversation")
 
   @@index([conversationId])
   @@index([createdAt])
   @@map("ai_messages")
 }
-
-// =========================
-// TELEGRAM ACCOUNTS
-// =========================
 
 model TelegramAccount {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -222,15 +171,10 @@ model TelegramAccount {
   username       String?  @db.VarChar(255)
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_telegram_accounts_user")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_telegram_accounts_user")
 
   @@map("telegram_accounts")
 }
-
-// =========================
-// TELEGRAM LINK TOKENS
-// =========================
 
 model TelegramLinkToken {
   id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -239,50 +183,35 @@ model TelegramLinkToken {
   expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
   usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_telegram_link_tokens_user")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_telegram_link_tokens_user")
 
   @@index([userId])
   @@index([expiresAt])
   @@map("telegram_link_tokens")
 }
 
-// =========================
-// ACHIEVEMENTS
-// =========================
-
 model Achievement {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code        String   @unique @db.VarChar(100)
-  title       String   @db.VarChar(255)
-  description String
-  icon        String?  @db.VarChar(255)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String            @unique @db.VarChar(100)
+  title            String            @db.VarChar(255)
+  description      String
+  icon             String?           @db.VarChar(255)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   userAchievements UserAchievement[]
 
   @@map("achievements")
 }
 
-// =========================
-// USER ACHIEVEMENTS
-// =========================
-
 model UserAchievement {
-  userId        String   @map("user_id") @db.Uuid
-  achievementId String   @map("achievement_id") @db.Uuid
-  unlockedAt    DateTime @default(now()) @map("unlocked_at") @db.Timestamptz(6)
-
-  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_achievements_achievement")
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_achievements_user")
+  userId        String      @map("user_id") @db.Uuid
+  achievementId String      @map("achievement_id") @db.Uuid
+  unlockedAt    DateTime    @default(now()) @map("unlocked_at") @db.Timestamptz(6)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_achievements_achievement")
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_achievements_user")
 
   @@id([userId, achievementId])
   @@map("user_achievements")
 }
-
-// =========================
-// ENUMS
-// =========================
 
 enum ai_message_role {
   SYSTEM
@@ -305,4 +234,65 @@ enum exercise_progress_status {
 enum user_role {
   STUDENT
   ADMIN
+}
+
+model Lecture {
+  id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug             String              @unique @db.VarChar(255)
+  title            String              @db.VarChar(255)
+  summary          String?
+  content          Json
+  estimatedMinutes Int                 @default(10) @map("estimated_minutes")
+  difficulty       exercise_difficulty @default(EASY)
+  isPublished      Boolean             @default(false) @map("is_published")
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime            @default(now()) @map("updated_at") @db.Timestamptz(6)
+  lectureProgress  LectureProgress[]
+  roadmapNodes     LearningPathNode[]
+
+  @@index([isPublished])
+  @@map("lectures")
+}
+
+model LearningPathNode {
+  id           String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  caseId       String             @map("case_id") @db.Uuid
+  type         learning_node_type
+  title        String             @db.VarChar(255)
+  description  String?
+  sortOrder    Int                @map("sort_order")
+  lectureId    String?            @map("lecture_id") @db.Uuid
+  exerciseId   String?            @map("exercise_id") @db.Uuid
+  isPublished  Boolean            @default(false) @map("is_published")
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime           @default(now()) @map("updated_at") @db.Timestamptz(6)
+  learningCase LearningCase       @relation(fields: [caseId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "fk_learning_path_nodes_case")
+  lecture      Lecture?           @relation(fields: [lectureId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "fk_learning_path_nodes_lecture")
+  exercise     Exercise?          @relation(fields: [exerciseId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "fk_learning_path_nodes_exercise")
+
+  @@unique([caseId, sortOrder], map: "learning_path_nodes_case_order_unique")
+  @@index([lectureId])
+  @@index([exerciseId])
+  @@map("learning_path_nodes")
+}
+
+model LectureProgress {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  lectureId    String    @map("lecture_id") @db.Uuid
+  lastPosition Int       @default(0) @map("last_position")
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "fk_lecture_progress_user")
+  lecture      Lecture   @relation(fields: [lectureId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "fk_lecture_progress_lecture")
+
+  @@unique([userId, lectureId], map: "lecture_progress_user_lecture_unique")
+  @@index([userId])
+  @@map("lecture_progress")
+}
+
+enum learning_node_type {
+  LECTURE
+  EXERCISE
 }

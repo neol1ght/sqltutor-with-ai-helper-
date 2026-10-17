@@ -35,7 +35,14 @@ export class AdminExercisesService {
                         title: true,
                     },
                 },
+
+                exerciseSolution: {
+                    select: {
+                        id: true,
+                    },
+                },
             },
+
             orderBy: [
                 {
                     caseId: 'asc',
@@ -53,6 +60,7 @@ export class AdminExercisesService {
                 where: {
                     id,
                 },
+
                 select: {
                     id: true,
                     caseId: true,
@@ -69,6 +77,12 @@ export class AdminExercisesService {
                             id: true,
                             slug: true,
                             title: true,
+                        },
+                    },
+
+                    exerciseSolution: {
+                        select: {
+                            id: true,
                         },
                     },
                 },
@@ -120,6 +134,7 @@ export class AdminExercisesService {
                 sortOrder: dto.sortOrder,
                 isPublished: dto.isPublished ?? false,
             },
+
             select: {
                 id: true,
                 caseId: true,
@@ -130,6 +145,20 @@ export class AdminExercisesService {
                 isPublished: true,
                 createdAt: true,
                 updatedAt: true,
+
+                learningCase: {
+                    select: {
+                        id: true,
+                        slug: true,
+                        title: true,
+                    },
+                },
+
+                exerciseSolution: {
+                    select: {
+                        id: true,
+                    },
+                },
             },
         });
     }
@@ -138,7 +167,8 @@ export class AdminExercisesService {
         id: string,
         dto: UpdateExerciseDto,
     ) {
-        await this.findOne(id);
+        const currentExercise =
+            await this.findOne(id);
 
         if (dto.caseId) {
             const learningCase =
@@ -155,17 +185,23 @@ export class AdminExercisesService {
             }
         }
 
-        const targetCaseId = dto.caseId;
+        const targetCaseId =
+            dto.caseId ?? currentExercise.caseId;
 
-        if (
-            targetCaseId !== undefined &&
-            dto.sortOrder !== undefined
-        ) {
+        const targetSortOrder =
+            dto.sortOrder ??
+            currentExercise.sortOrder;
+
+        const sortOrderChanged =
+            dto.sortOrder !== undefined ||
+            dto.caseId !== undefined;
+
+        if (sortOrderChanged) {
             const existingExercise =
                 await this.prisma.exercise.findFirst({
                     where: {
                         caseId: targetCaseId,
-                        sortOrder: dto.sortOrder,
+                        sortOrder: targetSortOrder,
                         NOT: {
                             id,
                         },
@@ -183,6 +219,7 @@ export class AdminExercisesService {
             where: {
                 id,
             },
+
             data: {
                 caseId: dto.caseId,
                 title: dto.title,
@@ -191,6 +228,7 @@ export class AdminExercisesService {
                 sortOrder: dto.sortOrder,
                 isPublished: dto.isPublished,
             },
+
             select: {
                 id: true,
                 caseId: true,
@@ -201,6 +239,20 @@ export class AdminExercisesService {
                 isPublished: true,
                 createdAt: true,
                 updatedAt: true,
+
+                learningCase: {
+                    select: {
+                        id: true,
+                        slug: true,
+                        title: true,
+                    },
+                },
+
+                exerciseSolution: {
+                    select: {
+                        id: true,
+                    },
+                },
             },
         });
     }
@@ -220,4 +272,3 @@ export class AdminExercisesService {
         };
     }
 }
-

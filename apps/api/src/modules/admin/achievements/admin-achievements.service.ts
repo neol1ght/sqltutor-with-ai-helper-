@@ -73,6 +73,13 @@ export class AdminAchievementsService {
                 description: dto.description,
                 icon: dto.icon,
             },
+            include: {
+                _count: {
+                    select: {
+                        userAchievements: true,
+                    },
+                },
+            },
         });
     }
 
@@ -129,6 +136,13 @@ export class AdminAchievementsService {
                 ...(dto.icon !== undefined && {
                     icon: dto.icon,
                 }),
+            },
+            include: {
+                _count: {
+                    select: {
+                        userAchievements: true,
+                    },
+                },
             },
         });
     }

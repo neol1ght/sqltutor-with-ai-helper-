@@ -2,7 +2,17 @@ import { BadRequestException } from '@nestjs/common';
 
 export class SqlQueryValidator {
     static validate(query: string): string {
-        const normalized = query.trim();
+        if (typeof query !== 'string') {
+            throw new BadRequestException(
+                'SQL запрос должен быть строкой',
+            );
+        }
+
+        // Убираем пробелы и BOM, который иногда появляется
+        // при передаче текста между редактором и API.
+        const normalized = query
+            .replace(/^\uFEFF/, '')
+            .trim();
 
         if (!normalized) {
             throw new BadRequestException(
@@ -10,7 +20,7 @@ export class SqlQueryValidator {
             );
         }
 
-        // Убираем один завершающий ;
+        // Удаляем один завершающий символ ;
         const withoutTrailingSemicolon =
             normalized.endsWith(';')
                 ? normalized.slice(0, -1).trim()
@@ -22,26 +32,31 @@ export class SqlQueryValidator {
             );
         }
 
-        // Запрещаем несколько SQL statements.
-        if (
-            withoutTrailingSemicolon.includes(';')
-        ) {
+        // Разрешаем только один SQL statement.
+        if (withoutTrailingSemicolon.includes(';')) {
             throw new BadRequestException(
                 'Разрешён только один SQL запрос',
             );
         }
 
-        const firstKeyword =
+        // Убираем обычные SQL-комментарии перед запросом,
+        // чтобы определить первое реальное ключевое слово.
+        const withoutLeadingComments =
             withoutTrailingSemicolon
-                .split(/\s+/)[0]
-                .toUpperCase();
+                .replace(/^(?:\s|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)+/, '')
+                .trim();
+
+        const firstKeyword =
+            withoutLeadingComments
+                .match(/^[a-zA-Z]+/)?.[0]
+                ?.toUpperCase();
 
         if (
             firstKeyword !== 'SELECT' &&
             firstKeyword !== 'WITH'
         ) {
             throw new BadRequestException(
-                'Разрешены только SELECT и WITH запросы',
+                `Разрешены только SELECT и WITH запросы. Получено начало: "${withoutLeadingComments.slice(0, 40)}"`,
             );
         }
 
@@ -71,10 +86,9 @@ export class SqlQueryValidator {
             withoutTrailingSemicolon.toUpperCase();
 
         for (const keyword of dangerousKeywords) {
-            const pattern =
-                new RegExp(
-                    `\\b${keyword}\\b`,
-                );
+            const pattern = new RegExp(
+                `\\b${keyword}\\b`,
+            );
 
             if (pattern.test(upperQuery)) {
                 throw new BadRequestException(

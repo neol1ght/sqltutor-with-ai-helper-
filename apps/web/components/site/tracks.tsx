@@ -48,7 +48,7 @@ export function Tracks() {
             return (
               <li key={course.slug}>
                 <Link
-                  href="/signup"
+                  href="/learn"
                   className="group flex h-full flex-col rounded-2xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-foreground/20 hover:shadow-xl hover:shadow-black/30"
                 >
                   <div className="flex items-center justify-between">

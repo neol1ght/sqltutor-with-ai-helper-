@@ -483,7 +483,10 @@ export class TelegramService
 
                         return;
                     }
-
+                    console.log('[Telegram progress]', {
+                        telegramId: ctx.from?.id,
+                        userId: telegramUser.userId,
+                    });
                     const progress =
                         await this.progressService.getUserSummary(
                             telegramUser.userId,

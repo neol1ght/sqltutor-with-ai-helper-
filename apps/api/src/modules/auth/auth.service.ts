@@ -267,7 +267,7 @@ export class AuthService {
                 type: 'access',
             },
             {
-                expiresIn: '15m',
+                expiresIn: '30m',
             },
         );
 

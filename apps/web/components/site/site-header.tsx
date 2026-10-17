@@ -127,7 +127,7 @@ export function SiteHeader() {
                     ) : user ? (
                         <>
                             <Link
-                                href="/profile"
+                                href="/learn/profile"
                                 className={cn(
                                     buttonVariants({
                                         variant: 'ghost',

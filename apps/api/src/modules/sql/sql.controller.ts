@@ -47,9 +47,9 @@ export class SqlController {
         @Req() req: AuthenticatedRequest,
     ) {
         return this.sqlService.submit(
+            req.user.id,
             exerciseId,
             dto.query,
-            req.user.id,
         );
     }
 }
