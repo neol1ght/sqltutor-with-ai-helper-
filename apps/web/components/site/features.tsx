@@ -2,12 +2,12 @@
 import {
   BarChart3,
   Database,
-  Send,
   Sparkles,
   Target,
   Zap,
 } from 'lucide-react'
 import { SectionHeading } from './section-heading'
+import { TelegramFeatureCard } from './telegram-feature-card'
 
 export function Features() {
   return (
@@ -80,24 +80,7 @@ export function Features() {
             title="Наглядный прогресс"
             description="Серии дней, XP и карта навыков показывают, что вы уже освоили и что дальше."
           />
-          <article className="group relative md:col-span-2 overflow-hidden rounded-2xl bg-[#229ED9]/15 border border-[#229ED9]/25 bg-gradient-to-br from-[#229ED9]/10 via-card to-card p-6 transition-colors hover:border-[#229ED9]/45">
-            {/* Telegram icon */}
-            <div className="flex size-10 items-center justify-center rounded-lg bg-[#229ED9]/15 text-[#229ED9]">
-              <Send className="size-5" aria-hidden="true" />
-            </div>
-
-            {/* Content */}
-            <h3 className="mt-5 font-semibold">
-              Telegram-бот
-            </h3>
-
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Продолжайте обучение в Telegram: получайте задания,
-              подсказки и следите за своим прогрессом прямо в мессенджере.
-            </p>
-            {/* Decorative glow */}
-            <div className="pointer-events-none absolute -bottom-12 -right-12 size-28 rounded-full bg-[#229ED9]/10 blur-2xl transition-all duration-500 group-hover:bg-[#229ED9]/15" />
-          </article>
+          <TelegramFeatureCard />
 
         </div>
       </div>

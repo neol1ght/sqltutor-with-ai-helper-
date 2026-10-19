@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BookOpen, Plus, Save, Trash2, Route, Pencil, RefreshCw } from 'lucide-react';
+import { BookOpen, Plus, Save, Trash2, Route, Pencil, RefreshCw, Video } from 'lucide-react';
 import {
   createAdminLecture, createAdminPathNode, deleteAdminLecture, deleteAdminPathNode,
   getAdminLectures, getAdminPathNodes, getContentCases, getContentExercises,
@@ -35,6 +35,8 @@ export function LearningContentManager() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [videoTitle, setVideoTitle] = useState('');
 
   const load = useCallback(async () => {
     setBusy(true); setError('');
@@ -60,14 +62,29 @@ export function LearningContentManager() {
     setNotice(''); setError('');
   }
 
+  function appendVideoBlock() {
+    const url = videoUrl.trim();
+    if (!url) { setError('Вставь ссылку на видео (YouTube, Rutube или прямой .mp4/.webm).'); return; }
+    let content: LectureBlock[];
+    try {
+      content = JSON.parse(lectureForm.contentText);
+      if (!Array.isArray(content)) throw new Error('Содержимое должно быть JSON-массивом блоков.');
+    } catch (err) { setError(`Проверь содержимое лекции: ${message(err)}`); return; }
+    const block: LectureBlock = { type: 'video', url, ...(videoTitle.trim() ? { title: videoTitle.trim() } : {}) };
+    setLectureForm({ ...lectureForm, contentText: JSON.stringify([...content, block], null, 2) });
+    setVideoUrl(''); setVideoTitle(''); setError('');
+    setNotice('Видео-блок добавлен в содержимое лекции. Не забудь сохранить лекцию.');
+  }
+
   async function saveLecture() {
     setError(''); setNotice('');
     let content: LectureBlock[];
     try {
       content = JSON.parse(lectureForm.contentText);
       if (!Array.isArray(content)) throw new Error('Содержимое должно быть JSON-массивом блоков.');
-      const allowed = ['text', 'code', 'callout', 'quiz'];
-      if (content.some((block) => !block || !allowed.includes(block.type))) throw new Error('Тип блока должен быть text, code, callout или quiz.');
+      const allowed = ['text', 'code', 'callout', 'quiz', 'video'];
+      if (content.some((block) => !block || !allowed.includes(block.type))) throw new Error('Тип блока должен быть text, code, callout, quiz или video.');
+      if (content.some((block) => block.type === 'video' && !block.url)) throw new Error('У видео-блока должно быть поле url.');
     } catch (err) { setError(`Проверь содержимое лекции: ${message(err)}`); return; }
     if (!lectureForm.slug.trim() || !lectureForm.title.trim()) { setError('Укажи slug и название лекции.'); return; }
     setBusy(true);
@@ -157,8 +174,15 @@ export function LearningContentManager() {
           <label className={labelClass}>Краткое описание<textarea className={inputClass} rows={2} value={lectureForm.summary} onChange={(e) => setLectureForm({ ...lectureForm, summary: e.target.value })} /></label>
           <div className="grid grid-cols-2 gap-3"><label className={labelClass}>Минут<input type="number" min={1} max={240} className={inputClass} value={lectureForm.estimatedMinutes} onChange={(e) => setLectureForm({ ...lectureForm, estimatedMinutes: Number(e.target.value) })} /></label><label className={labelClass}>Сложность<select className={inputClass} value={lectureForm.difficulty} onChange={(e) => setLectureForm({ ...lectureForm, difficulty: e.target.value })}><option value="EASY">Начальная</option><option value="MEDIUM">Средняя</option><option value="HARD">Продвинутая</option></select></label></div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={lectureForm.isPublished} onChange={(e) => setLectureForm({ ...lectureForm, isPublished: e.target.checked })} />Опубликовать лекцию</label>
+          <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-3">
+            <h3 className="flex items-center gap-2 text-sm font-medium"><Video className="size-4 text-primary" />Видеоурок</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">Вставь ссылку на видео — YouTube, Rutube или прямую ссылку на файл (.mp4, .webm). Блок добавится в содержимое лекции ниже.</p>
+            <label className={labelClass}>Название видео (необязательно)<input className={inputClass} value={videoTitle} onChange={(e) => setVideoTitle(e.target.value)} placeholder="Например: Группировка данных" /></label>
+            <label className={labelClass}>Ссылка на видео<input className={inputClass} value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." /></label>
+            <button type="button" onClick={appendVideoBlock} className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"><Plus className="size-4" />Добавить видео-блок</button>
+          </div>
           <label className={labelClass}>Содержимое (JSON-блоки)<textarea spellCheck={false} className={`${inputClass} min-h-72 font-mono text-xs leading-relaxed`} value={lectureForm.contentText} onChange={(e) => setLectureForm({ ...lectureForm, contentText: e.target.value })} /></label>
-          <p className="text-xs leading-relaxed text-muted-foreground">Типы блоков: text, code, callout, quiz. Вопрос quiz использует options, correctOption (индекс с нуля) и explanation.</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">Типы блоков: text, code, callout, quiz, video. Вопрос quiz использует options, correctOption (индекс с нуля) и explanation. Видео-блок использует url (YouTube, Rutube или прямой .mp4/.webm) и необязательный title.</p>
           <div className="flex gap-2"><button onClick={() => void saveLecture()} disabled={busy} className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"><Save className="size-4" />{busy ? 'Сохраняем…' : 'Сохранить'}</button>{editingLecture && <button onClick={() => { setEditingLecture(null); setLectureForm(EMPTY_LECTURE); }} className="rounded-lg border border-border px-3 py-2 text-sm">Отмена</button>}</div>
         </div>
       </section>

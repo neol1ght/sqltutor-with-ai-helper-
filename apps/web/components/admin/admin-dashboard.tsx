@@ -913,7 +913,7 @@ export function AdminDashboard() {
                   />
                 </div>
 
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value ?? 'ALL')}>
                   <SelectTrigger
                     className="h-9 w-full sm:w-48"
                     aria-label="Фильтр по роли"

@@ -3,7 +3,7 @@ const TOKEN_KEY = 'sqltutor_access_token';
 
 export type LectureBlock = {
   id?: string;
-  type: 'text' | 'code' | 'callout' | 'quiz';
+  type: 'text' | 'code' | 'callout' | 'quiz' | 'video';
   title?: string;
   body?: string;
   code?: string;
@@ -11,6 +11,7 @@ export type LectureBlock = {
   options?: string[];
   correctOption?: number;
   explanation?: string;
+  url?: string;
 };
 
 export type AdminLecture = {

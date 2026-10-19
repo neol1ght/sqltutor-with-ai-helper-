@@ -1,4 +1,4 @@
-import { getAccessToken, refreshAccessToken } from '@/lib/api/auth';
+import { getAccessToken, refreshAccessToken } from '@/lib/auth/session';
 
 const API_URL =
     process.env.NEXT_PUBLIC_API_URL ??

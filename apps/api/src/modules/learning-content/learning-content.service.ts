@@ -12,6 +12,61 @@ export class LearningContentService {
     });
     if (!learningCase) throw new NotFoundException('Учебный блок не найден или не опубликован');
 
+    return this.buildRoadmap(learningCase, userId);
+  }
+
+  /**
+   * Определяет следующий этап для пользователя: первый незавершённый
+   * доступный этап в первом учебном блоке, где ещё есть прогресс.
+   */
+  async getContinue(userId: string) {
+    const cases = await this.prisma.learningCase.findMany({
+      where: { isPublished: true },
+      select: { id: true, slug: true, title: true, description: true, difficulty: true },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+
+    if (!cases.length) {
+      return { status: 'EMPTY' as const, learningCase: null, node: null, progress: null };
+    }
+
+    let hasAnyNode = false;
+
+    for (const learningCase of cases) {
+      const roadmap = await this.buildRoadmap(learningCase, userId);
+      const nextNode = roadmap.nodes.find((node) => node.unlocked && !node.completed);
+
+      if (roadmap.nodes.length > 0) {
+        hasAnyNode = true;
+      }
+
+      if (nextNode) {
+        return {
+          status: roadmap.progress.completed > 0 ? ('IN_PROGRESS' as const) : ('NOT_STARTED' as const),
+          learningCase: { slug: roadmap.learningCase.slug, title: roadmap.learningCase.title },
+          node: {
+            type: nextNode.type,
+            title: nextNode.title,
+            lectureSlug: nextNode.lecture?.slug ?? null,
+            exerciseId: nextNode.exercise?.id ?? null,
+          },
+          progress: roadmap.progress,
+        };
+      }
+    }
+
+    // Ни одного этапа ни в одном курсе — контент ещё не настроен.
+    if (!hasAnyNode) {
+      return { status: 'EMPTY' as const, learningCase: null, node: null, progress: null };
+    }
+
+    return { status: 'COMPLETED' as const, learningCase: null, node: null, progress: null };
+  }
+
+  private async buildRoadmap(
+    learningCase: { id: string; slug: string; title: string; description: string | null; difficulty: string },
+    userId: string,
+  ) {
     const nodes = await this.prisma.learningPathNode.findMany({
       where: { caseId: learningCase.id, isPublished: true },
       include: {

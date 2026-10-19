@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { Prisma, exercise_difficulty } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { CreateLectureDto, UpdateLectureDto } from './dto/lecture.dto.js';
+import { validateLectureContent } from './lecture-content.validator.js';
 
 @Injectable()
 export class AdminLecturesService {
@@ -28,12 +29,13 @@ export class AdminLecturesService {
   async create(dto: CreateLectureDto) {
     const exists = await this.prisma.lecture.findUnique({ where: { slug: dto.slug } });
     if (exists) throw new ConflictException('Лекция с таким slug уже существует');
+    const content = validateLectureContent(dto.content);
     return this.prisma.lecture.create({
       data: {
         slug: dto.slug.trim(),
         title: dto.title.trim(),
         summary: dto.summary,
-        content: dto.content as Prisma.InputJsonValue,
+        content: content as Prisma.InputJsonValue,
         estimatedMinutes: dto.estimatedMinutes ?? 10,
         difficulty: (dto.difficulty ?? 'EASY') as exercise_difficulty,
         isPublished: dto.isPublished ?? false,
@@ -55,7 +57,7 @@ export class AdminLecturesService {
       difficulty: dto.difficulty as exercise_difficulty | undefined,
       isPublished: dto.isPublished,
     };
-    if (dto.content !== undefined) data.content = dto.content as Prisma.InputJsonValue;
+    if (dto.content !== undefined) data.content = validateLectureContent(dto.content) as Prisma.InputJsonValue;
     return this.prisma.lecture.update({ where: { id }, data });
   }
 

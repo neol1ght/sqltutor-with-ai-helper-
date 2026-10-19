@@ -159,6 +159,29 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     }
 }
 
+/*
+ * Обновляет пару токенов по сохранённому refresh token.
+ * Возвращает новый access token или null, если обновить не удалось.
+ */
+export async function refreshAccessToken(): Promise<string | null> {
+    const refreshToken = getRefreshToken();
+
+    if (!refreshToken) {
+        return null;
+    }
+
+    try {
+        const tokens = await refreshRequest(refreshToken);
+
+        localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
+        localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+
+        return tokens.accessToken;
+    } catch {
+        return null;
+    }
+}
+
 export async function logout() {
     const refreshToken =
         getRefreshToken();

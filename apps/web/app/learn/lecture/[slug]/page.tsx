@@ -1,13 +1,76 @@
 'use client';
 
-import {useCallback, useEffect, useMemo, useState} from 'react';
-import {useParams, useRouter} from 'next/navigation';
+import {Suspense, useCallback, useEffect, useMemo, useState} from 'react';
+import {useParams, useRouter, useSearchParams} from 'next/navigation';
 import Link from 'next/link';
 import {ArrowLeft, ArrowRight, CheckCircle2, CircleHelp, Code2, Lightbulb, Trophy} from 'lucide-react';
 import {getLecture, saveLectureProgress, type LectureResponse, type LectureBlock} from '@/lib/api/learning-content';
 
+/*
+ * Преобразует ссылку на видео в данные для плеера.
+ * Поддерживаются YouTube, Rutube и прямые ссылки на видеофайлы.
+ */
+function resolveVideo(url: string): { kind: 'embed' | 'file'; src: string } | null {
+    let parsed: URL;
+
+    try {
+        parsed = new URL(url);
+    } catch {
+        return null;
+    }
+
+    const host = parsed.hostname.toLowerCase();
+
+    // YouTube: watch?v=ID, youtu.be/ID, shorts/ID, embed/ID
+    if (host === 'youtube.com' || host === 'www.youtube.com' || host === 'm.youtube.com') {
+        const id = parsed.searchParams.get('v')
+            ?? parsed.pathname.split('/').filter(Boolean).pop();
+        if (id && /^[\w-]{6,}$/.test(id)) {
+            return { kind: 'embed', src: `https://www.youtube.com/embed/${id}` };
+        }
+        return null;
+    }
+
+    if (host === 'youtu.be') {
+        const id = parsed.pathname.split('/').filter(Boolean)[0];
+        if (id) return { kind: 'embed', src: `https://www.youtube.com/embed/${id}` };
+        return null;
+    }
+
+    if (host === 'youtube-nocookie.com' || host === 'www.youtube-nocookie.com') {
+        const id = parsed.pathname.split('/').filter(Boolean).pop();
+        if (id) return { kind: 'embed', src: `https://www.youtube-nocookie.com/embed/${id}` };
+        return null;
+    }
+
+    // Rutube: rutube.ru/video/ID
+    if (host === 'rutube.ru' || host === 'www.rutube.ru') {
+        const id = parsed.pathname.split('/').filter(Boolean).pop();
+        if (id) return { kind: 'embed', src: `https://www.rutube.ru/play/embed/${id}` };
+        return null;
+    }
+
+    // Прямая ссылка на видеофайл.
+    const pathname = parsed.pathname.toLowerCase();
+    if (/\.(mp4|webm|ogg|m4v|mov)$/.test(pathname)) {
+        return { kind: 'file', src: parsed.toString() };
+    }
+
+    return null;
+}
+
 export default function InteractiveLecturePage() {
+    return (
+        <Suspense fallback={<main className="flex flex-1 items-center justify-center text-sm text-muted-foreground">Загружаем лекцию…</main>}>
+            <InteractiveLectureContent />
+        </Suspense>
+    );
+}
+
+function InteractiveLectureContent() {
     const {slug} = useParams<{ slug: string }>();
+    const searchParams = useSearchParams();
+    const caseSlug = searchParams.get('case');
     const router = useRouter();
     const [lecture, setLecture] = useState<LectureResponse | null>(null);
     const [index, setIndex] = useState(0);
@@ -61,20 +124,22 @@ export default function InteractiveLecturePage() {
 
     if (error && !lecture) return <main className="mx-auto max-w-3xl flex-1 px-4 py-12"><p role="alert"
                                                                                            className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{error}</p>
-        <Link className="mt-4 inline-block text-sm underline" href="/learn/roadmap">Вернуться к роадмапам</Link></main>;
+        <Link className="mt-4 inline-block text-sm underline" href={caseSlug ? `/learn/roadmap/${caseSlug}` : '/learn/roadmap'}>Вернуться к программе</Link></main>;
     if (!lecture) return <main
         className="flex flex-1 items-center justify-center text-sm text-muted-foreground">Загружаем лекцию…</main>;
     if (!blocks.length) return <main className="mx-auto max-w-3xl flex-1 px-4 py-12"><h1
         className="text-2xl font-semibold">{lecture.title}</h1><p className="mt-3 text-muted-foreground">В этой лекции
         пока нет содержимого.</p></main>;
 
+    const hasVideo = blocks.some((block) => block.type === 'video');
+
     return <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-8">
-        <Link href="/learn/roadmap"
+        <Link href={caseSlug ? `/learn/roadmap/${caseSlug}` : '/learn/roadmap'}
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft
-            className="size-4"/>К роадмапу</Link>
+            className="size-4"/>К программе курса</Link>
         <header className="mt-5 rounded-2xl border border-border bg-card p-5 sm:p-7">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span
-                className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">ИНТЕРАКТИВНАЯ ЛЕКЦИЯ</span><span>{lecture.estimatedMinutes} мин.</span><span>Шаг {index + 1} из {blocks.length}</span>
+                className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">{hasVideo ? 'ВИДЕОУРОК' : 'ИНТЕРАКТИВНАЯ ЛЕКЦИЯ'}</span><span>{lecture.estimatedMinutes} мин.</span><span>Шаг {index + 1} из {blocks.length}</span>
             </div>
             <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{lecture.title}</h1>{lecture.summary &&
             <p className="mt-3 text-sm leading-6 text-muted-foreground">{lecture.summary}</p>}
@@ -96,6 +161,34 @@ export default function InteractiveLecturePage() {
                 <pre
                     className="mt-4 overflow-x-auto rounded-xl border border-border bg-[#10151f] p-4 text-sm leading-7 text-slate-100"><code>{block.code}</code></pre>
             </>}
+            {block.type === 'video' && (() => {
+                const video = block.url ? resolveVideo(block.url) : null;
+                if (!video) {
+                    return <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+                        Не удалось открыть видео: ссылка не поддерживается или недоступна.
+                    </div>;
+                }
+                if (video.kind === 'embed') {
+                    return <div className="mt-4 aspect-video w-full overflow-hidden rounded-xl border border-border">
+                        <iframe
+                            src={video.src}
+                            title={block.title ?? 'Видеоурок'}
+                            className="h-full w-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    </div>;
+                }
+                return <div className="mt-4 overflow-hidden rounded-xl border border-border">
+                    <video
+                        src={video.src}
+                        title={block.title ?? 'Видеоурок'}
+                        controls
+                        playsInline
+                        className="aspect-video w-full bg-black"
+                    />
+                </div>;
+            })()}
             {block.type === 'quiz' && <div className="mt-5"><p
                 className="text-sm leading-6 text-muted-foreground">{block.body || 'Выбери правильный ответ.'}</p>
                 <div className="mt-4 space-y-2">{(block.options ?? []).map((option, optionIndex) => {
@@ -128,9 +221,9 @@ export default function InteractiveLecturePage() {
             </button>
             {index < blocks.length - 1 ? <button onClick={() => void goTo(index + 1)}
                                                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Далее <ArrowRight
-                className="size-4"/></button> : finished ? <button onClick={() => router.push('/learn/roadmap')}
+                className="size-4"/></button> : finished ? <button onClick={() => router.push(caseSlug ? `/learn/roadmap/${caseSlug}` : '/learn/roadmap')}
                                                                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">К
-                роадмапу <ArrowRight className="size-4"/></button> : <button onClick={() => void complete()}
+                программе <ArrowRight className="size-4"/></button> : <button onClick={() => void complete()}
                                                                              disabled={saving || blocks.some((b, i) => b.type === 'quiz' && answers[i] !== b.correctOption)}
                                                                              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
                 <CheckCircle2 className="size-4"/>{saving ? 'Сохраняем…' : 'Завершить лекцию'}</button>}</footer>

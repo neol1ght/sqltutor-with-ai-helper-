@@ -15,6 +15,11 @@ export class LearningContentController {
     return id;
   }
 
+  @Get('learning-paths/continue')
+  continueLearning(@Req() req: AuthRequest) {
+    return this.service.getContinue(this.userId(req));
+  }
+
   @Get('learning-paths/:caseSlug')
   roadmap(@Param('caseSlug') slug: string, @Req() req: AuthRequest) {
     return this.service.getRoadmap(slug, this.userId(req));

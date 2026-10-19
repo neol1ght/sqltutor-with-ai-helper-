@@ -7,13 +7,11 @@ import { usePathname } from 'next/navigation';
 import { logout } from '@/lib/auth/session';
 import {
     BookOpen,
-    Code2,
     Flame,
     LayoutDashboard,
     LogOut,
-    Trophy,
+    Sparkles,
     UserRound,
-    Map
 } from 'lucide-react';
 
 import { Logo } from '@/components/site/logo';
@@ -30,31 +28,28 @@ const NAV = [
         href: '/learn',
         label: 'Главная',
         icon: LayoutDashboard,
-    },
-    {
-        href: '/learn/lesson',
-        label: 'Текущий урок',
-        icon: Code2,
+        isActive: (pathname: string) => pathname === '/learn',
     },
     {
         href: '/learn/roadmap',
-        label: 'Карта курсов',
-        icon: Map,
-    },
-    {
-        href: '/learn#courses',
-        label: 'Мои курсы',
+        label: 'Обучение',
         icon: BookOpen,
+        isActive: (pathname: string) =>
+            pathname.startsWith('/learn/roadmap') ||
+            pathname.startsWith('/learn/lecture') ||
+            pathname.startsWith('/learn/lesson'),
     },
     {
-        href: '/learn#challenges',
-        label: 'Задачи',
-        icon: Trophy,
+        href: '/learn/assistant',
+        label: 'AI-помощник',
+        icon: Sparkles,
+        isActive: (pathname: string) => pathname.startsWith('/learn/assistant'),
     },
     {
         href: '/learn/profile',
         label: 'Профиль',
         icon: UserRound,
+        isActive: (pathname: string) => pathname.startsWith('/learn/profile'),
     },
 ];
 
@@ -153,15 +148,9 @@ export function LearnSidebar() {
                             href,
                             label,
                             icon: Icon,
+                            isActive,
                         }) => {
-                            const active =
-                                href ===
-                                '/learn/profile'
-                                    ? pathname.startsWith(
-                                        '/learn/profile',
-                                    )
-                                    : pathname ===
-                                        href;
+                            const active = isActive(pathname);
 
                             return (
                                 <li key={href}>
@@ -296,15 +285,9 @@ export function LearnMobileNav() {
                             href,
                             label,
                             icon: Icon,
+                            isActive,
                         }) => {
-                            const active =
-                                href ===
-                                '/learn/profile'
-                                    ? pathname.startsWith(
-                                        '/learn/profile',
-                                    )
-                                    : pathname ===
-                                        href;
+                            const active = isActive(pathname);
 
                             return (
                                 <li key={href}>

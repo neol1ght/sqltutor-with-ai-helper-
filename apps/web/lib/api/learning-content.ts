@@ -29,14 +29,27 @@ export type RoadmapResponse = {
   progress: { completed: number; total: number; percent: number };
 };
 export type LectureBlock = {
-  id?: string; type: 'text' | 'code' | 'callout' | 'quiz'; title?: string; body?: string;
+  id?: string; type: 'text' | 'code' | 'callout' | 'quiz' | 'video'; title?: string; body?: string;
   code?: string; language?: string; options?: string[]; correctOption?: number; explanation?: string;
+  url?: string;
 };
 export type LectureResponse = {
   id: string; slug: string; title: string; summary: string | null; content: LectureBlock[];
   estimatedMinutes: number; difficulty: string; progress: { lastPosition: number; completedAt: string | null };
 };
+export type ContinueResponse = {
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'EMPTY';
+  learningCase: { slug: string; title: string } | null;
+  node: {
+    type: 'LECTURE' | 'EXERCISE';
+    title: string;
+    lectureSlug: string | null;
+    exerciseId: string | null;
+  } | null;
+  progress: { completed: number; total: number; percent: number } | null;
+};
 export const getRoadmap = (slug: string) => request<RoadmapResponse>(`/learning-paths/${encodeURIComponent(slug)}`);
+export const getContinue = () => request<ContinueResponse>('/learning-paths/continue');
 export const getLecture = (slug: string) => request<LectureResponse>(`/lectures/${encodeURIComponent(slug)}`);
 export const saveLectureProgress = (id: string, body: { lastPosition?: number; completed?: boolean }) =>
   request(`/lectures/${encodeURIComponent(id)}/progress`, { method: 'PATCH', body: JSON.stringify(body) });

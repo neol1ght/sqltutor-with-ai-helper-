@@ -29,7 +29,7 @@ export default function LearningRoadmapPage() {
       <div className="relative mt-7 space-y-3">
         <div className="absolute bottom-8 left-[23px] top-8 w-px bg-border sm:left-[27px]" />
         {data.nodes.map((node, index) => {
-          const href = node.type === 'LECTURE' && node.lecture ? `/learn/lecture/${node.lecture.slug}` : node.type === 'EXERCISE' && node.exercise ? `/learn/lesson?exerciseId=${node.exercise.id}` : '#';
+          const href = node.type === 'LECTURE' && node.lecture ? `/learn/lecture/${node.lecture.slug}?case=${slug}` : node.type === 'EXERCISE' && node.exercise ? `/learn/lesson?exerciseId=${node.exercise.id}` : '#';
           const canOpen = node.unlocked && Boolean(node.lecture || node.exercise);
           return <article key={node.id} className={`relative flex gap-4 rounded-2xl border p-4 sm:gap-5 sm:p-5 ${node.completed ? 'border-primary/30 bg-primary/[0.04]' : canOpen ? 'border-border bg-card' : 'border-border/60 bg-muted/20 opacity-75'}`}>
             <div className={`z-10 flex size-12 shrink-0 items-center justify-center rounded-full border ${node.completed ? 'border-primary bg-primary text-primary-foreground' : canOpen ? 'border-primary/40 bg-background text-primary' : 'border-border bg-muted text-muted-foreground'}`}>{node.completed ? <CheckCircle2 className="size-5" /> : !canOpen ? <LockKeyhole className="size-5" /> : node.type === 'LECTURE' ? <BookOpen className="size-5" /> : <Code2 className="size-5" />}</div>

@@ -18,6 +18,10 @@ export type AdminExercise = {
         slug: string;
         title: string;
     };
+    exerciseSolution?: {
+        id: string;
+        query: string;
+    } | null;
 };
 
 export type CreateExercisePayload = {

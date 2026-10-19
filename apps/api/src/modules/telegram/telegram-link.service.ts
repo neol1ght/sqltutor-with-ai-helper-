@@ -13,6 +13,25 @@ export class TelegramLinkService {
         private readonly prisma: PrismaService,
     ) {}
 
+    async getLinkStatus(userId: string) {
+        const telegramAccount =
+            await this.prisma.telegramAccount.findUnique({
+                where: {
+                    userId,
+                },
+                select: {
+                    username: true,
+                    createdAt: true,
+                },
+            });
+
+        return {
+            linked: Boolean(telegramAccount),
+            username: telegramAccount?.username ?? null,
+            linkedAt: telegramAccount?.createdAt ?? null,
+        };
+    }
+
     async createLinkToken(userId: string) {
         const telegramAccount =
             await this.prisma.telegramAccount.findUnique({
@@ -112,27 +131,37 @@ export class TelegramLinkService {
             );
         }
 
+        /*
+         * Погашаем токен атомарно: условный updateMany гарантирует,
+         * что при конкурентных запросах /start токен будет использован
+         * только один раз (и только пока не истёк срок действия).
+         */
         const telegramAccount =
             await this.prisma.$transaction(async (tx) => {
-                const account =
-                    await tx.telegramAccount.create({
-                        data: {
-                            userId: linkToken.userId,
-                            telegramUserId,
-                            username: username ?? null,
-                        },
-                    });
-
-                await tx.telegramLinkToken.update({
+                const consumed = await tx.telegramLinkToken.updateMany({
                     where: {
                         id: linkToken.id,
+                        usedAt: null,
+                        expiresAt: { gt: new Date() },
                     },
                     data: {
                         usedAt: new Date(),
                     },
                 });
 
-                return account;
+                if (consumed.count !== 1) {
+                    throw new ConflictException(
+                        'Telegram link token has already been used',
+                    );
+                }
+
+                return tx.telegramAccount.create({
+                    data: {
+                        userId: linkToken.userId,
+                        telegramUserId,
+                        username: username ?? null,
+                    },
+                });
             });
 
         return telegramAccount;

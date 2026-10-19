@@ -6,24 +6,26 @@ import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
-  Clock,
   Code2,
   Flame,
   Sparkles,
   Target,
-  Trophy,
   Zap,
   Lock,
 } from 'lucide-react'
 
 import { buttonVariants } from '@/components/ui/button'
-import { SqlCode } from '@/components/sql/sql-code'
 import { cn } from '@/lib/utils'
 
 import {
   getDashboard,
   type DashboardData,
 } from '@/lib/api/dashboard'
+
+import {
+  getContinue,
+  type ContinueResponse,
+} from '@/lib/api/learning-content'
 
 const API_URL =
     process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3500/api'
@@ -50,27 +52,6 @@ const CASE_STYLES = [
     bg: 'bg-ai/10',
     text: 'text-ai',
     dot: 'bg-ai',
-  },
-]
-
-const CHALLENGES = [
-  {
-    title: 'Вторая по величине зарплата',
-    level: 'Средне',
-    xp: 60,
-    minutes: 8,
-  },
-  {
-    title: 'Клиенты без заказов',
-    level: 'Легко',
-    xp: 30,
-    minutes: 5,
-  },
-  {
-    title: 'Рост выручки по месяцам',
-    level: 'Сложно',
-    xp: 100,
-    minutes: 15,
   },
 ]
 
@@ -123,6 +104,12 @@ export default function DashboardPage() {
 
   const [dashboardError, setDashboardError] =
       useState<string | null>(null)
+
+  const [continueData, setContinueData] =
+      useState<ContinueResponse | null>(null)
+
+  const [isContinueLoading, setIsContinueLoading] =
+      useState(true)
 
   // ----------------------------------------
   // LOAD LEARNING CASES
@@ -231,6 +218,43 @@ export default function DashboardPage() {
   }, [])
 
   // ----------------------------------------
+  // LOAD CONTINUE LEARNING
+  // ----------------------------------------
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadContinue() {
+      const accessToken = localStorage.getItem('sqltutor_access_token')
+
+      if (!accessToken) {
+        setIsContinueLoading(false)
+        return
+      }
+
+      try {
+        const data = await getContinue()
+
+        if (!cancelled) {
+          setContinueData(data)
+        }
+      } catch (error) {
+        console.error('Failed to load continue learning:', error)
+      } finally {
+        if (!cancelled) {
+          setIsContinueLoading(false)
+        }
+      }
+    }
+
+    void loadContinue()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // ----------------------------------------
   // DASHBOARD DATA
   // ----------------------------------------
 
@@ -269,7 +293,11 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="font-mono text-sm text-muted-foreground">
-              {'-- понедельник, 28 сентября'}
+              {`-- ${new Date().toLocaleDateString('ru-RU', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              })}`}
             </p>
 
             <h1 className="mt-1 text-3xl font-semibold tracking-tight">
@@ -428,59 +456,144 @@ export default function DashboardPage() {
               aria-labelledby="continue-heading"
               className="relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card p-6 lg:col-span-2"
           >
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="font-mono text-xs text-primary">
-                {'Соединения и агрегация · урок 15 из 30'}
-              </p>
+            {isContinueLoading ? (
+              <>
+                <div className="h-4 w-40 animate-pulse rounded bg-muted" />
+                <div className="mt-3 h-8 w-2/3 animate-pulse rounded bg-muted" />
+                <div className="mt-3 h-4 w-full max-w-md animate-pulse rounded bg-muted" />
+              </>
+            ) : continueData?.node ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-mono text-xs text-primary">
+                    {`${continueData.learningCase?.title ?? 'Курс'} · этап ${
+                      (continueData.progress?.completed ?? 0) + 1
+                    } из ${continueData.progress?.total ?? '—'}`}
+                  </p>
 
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">
-              <Code2
-                  className="size-3"
-                  aria-hidden="true"
-              />
-              Практика
-            </span>
-            </div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">
+                    {continueData.node.type === 'LECTURE' ? (
+                      <BookOpen className="size-3" aria-hidden="true" />
+                    ) : (
+                      <Code2 className="size-3" aria-hidden="true" />
+                    )}
+                    {continueData.node.type === 'LECTURE' ? 'Лекция' : 'Практика'}
+                  </span>
+                </div>
 
-            <h2
-                id="continue-heading"
-                className="mt-2 text-2xl font-semibold tracking-tight"
-            >
-              Фильтрация групп с HAVING
-            </h2>
+                <h2
+                    id="continue-heading"
+                    className="mt-2 text-2xl font-semibold tracking-tight"
+                >
+                  {continueData.node.title}
+                </h2>
 
-            <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
-              Узнайте, почему WHERE не умеет фильтровать агрегаты и как HAVING помогает оставить только нужные группы.
-            </p>
+                <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
+                  {continueData.status === 'NOT_STARTED'
+                    ? 'Начните свой учебный маршрут: короткие лекции и SQL-практика с проверкой решений.'
+                    : 'Следующий непройденный этап вашего обучения.'}
+                </p>
 
-            <div className="mt-5 rounded-lg border border-border bg-code px-4 py-3 text-sm">
-              <SqlCode code="SELECT category, AVG(price) FROM products GROUP BY category HAVING AVG(price) > 50;" />
-            </div>
+                {continueData.progress && continueData.progress.total > 0 && (
+                  <div className="mt-4 h-1.5 max-w-md overflow-hidden rounded-full bg-muted">
+                    <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{
+                          width: `${continueData.progress.percent}%`,
+                        }}
+                    />
+                  </div>
+                )}
 
-            <div className="mt-6 flex flex-wrap items-center gap-4">
-              <Link
-                  href="/learn/lesson"
-                  className={buttonVariants({
-                    size: 'lg',
-                    className: 'h-10 px-4',
-                  })}
-              >
-                Продолжить урок
+                <div className="mt-6 flex flex-wrap items-center gap-4">
+                  <Link
+                      href={
+                        continueData.node.type === 'LECTURE' && continueData.node.lectureSlug
+                          ? `/learn/lecture/${continueData.node.lectureSlug}?case=${continueData.learningCase?.slug ?? ''}`
+                          : `/learn/lesson?exerciseId=${continueData.node.exerciseId}&case=${continueData.learningCase?.slug ?? ''}`
+                      }
+                      className={buttonVariants({
+                        size: 'lg',
+                        className: 'h-10 px-4',
+                      })}
+                  >
+                    {continueData.status === 'NOT_STARTED' ? 'Начать обучение' : 'Продолжить обучение'}
 
-                <ArrowRight
-                    data-icon="inline-end"
-                    aria-hidden="true"
-                />
-              </Link>
+                    <ArrowRight
+                        data-icon="inline-end"
+                        aria-hidden="true"
+                    />
+                  </Link>
 
-              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Clock
-                  className="size-4"
-                  aria-hidden="true"
-              />
-              осталось ~8 мин
-            </span>
-            </div>
+                  {continueData.progress && (
+                    <span className="text-sm text-muted-foreground">
+                      Пройдено {continueData.progress.completed} из{' '}
+                      {continueData.progress.total} этапов
+                    </span>
+                  )}
+                </div>
+              </>
+            ) : continueData?.status === 'COMPLETED' ? (
+              <>
+                <p className="font-mono text-xs text-primary">
+                  {'Все этапы пройдены'}
+                </p>
+
+                <h2
+                    id="continue-heading"
+                    className="mt-2 text-2xl font-semibold tracking-tight"
+                >
+                  Отличная работа!
+                </h2>
+
+                <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
+                  Вы прошли все доступные учебные маршруты. Возвращайтесь позже — администраторы
+                  добавляют новые этапы.
+                </p>
+
+                <Link
+                    href="/learn/roadmap"
+                    className={buttonVariants({
+                        size: 'lg',
+                        className: 'mt-6 h-10 px-4',
+                    })}
+                >
+                  Повторить материал
+
+                    <ArrowRight data-icon="inline-end" aria-hidden="true" />
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="font-mono text-xs text-primary">
+                  {'Учебный маршрут'}
+                </p>
+
+                <h2
+                    id="continue-heading"
+                    className="mt-2 text-2xl font-semibold tracking-tight"
+                >
+                  Начните учиться
+                </h2>
+
+                <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
+                  Учебные маршруты пока наполняются контентом. Загляните в раздел «Обучение» или
+                  попробуйте AI-помощника.
+                </p>
+
+                <Link
+                    href="/learn/roadmap"
+                    className={buttonVariants({
+                        size: 'lg',
+                        className: 'mt-6 h-10 px-4',
+                    })}
+                >
+                  Открыть обучение
+
+                    <ArrowRight data-icon="inline-end" aria-hidden="true" />
+                </Link>
+              </>
+            )}
           </section>
 
           {/* ACTIVITY */}
@@ -801,75 +914,16 @@ export default function DashboardPage() {
             </ul>
 
             <Link
-                href="/learn/lesson"
+                href="/learn/assistant"
                 className={buttonVariants({
                   variant: 'outline',
                   className: 'mt-6 w-full',
                 })}
             >
-              Начать упражнения
+              Открыть AI-помощника
             </Link>
           </section>
         </div>
-
-        {/* CHALLENGES */}
-
-        <section
-            id="challenges"
-            aria-labelledby="challenges-heading"
-            className="mt-6 scroll-mt-24"
-        >
-          <h2
-              id="challenges-heading"
-              className="flex items-center gap-2 font-semibold"
-          >
-            <Trophy
-                className="size-4 text-warn"
-                aria-hidden="true"
-            />
-            Рекомендуемые задачи
-          </h2>
-
-          <ul className="mt-4 grid gap-3 md:grid-cols-3">
-            {CHALLENGES.map((challenge) => (
-                <li key={challenge.title}>
-                  <Link
-                      href="/learn/lesson"
-                      className="group flex h-full flex-col rounded-xl border border-border bg-card p-5 transition-colors hover:border-foreground/20"
-                  >
-                <span
-                    className={cn(
-                        'w-fit rounded-md px-2 py-0.5 text-xs font-medium',
-                        challenge.level === 'Легко' &&
-                        'bg-primary/10 text-primary',
-                        challenge.level === 'Средне' &&
-                        'bg-ai/10 text-ai',
-                        challenge.level === 'Сложно' &&
-                        'bg-warn/10 text-warn',
-                    )}
-                >
-                  {challenge.level}
-                </span>
-
-                    <p className="mt-3 font-medium">
-                      {challenge.title}
-                    </p>
-
-                    <div className="mt-auto flex items-center justify-between pt-4 text-xs text-muted-foreground">
-                  <span>
-                    {`+${challenge.xp} XP · ${challenge.minutes} мин`}
-                  </span>
-
-                      <ArrowRight
-                          className="size-4 transition-transform group-hover:translate-x-0.5"
-                          aria-hidden="true"
-                      />
-                    </div>
-                  </Link>
-                </li>
-            ))}
-          </ul>
-        </section>
       </main>
   )
 }

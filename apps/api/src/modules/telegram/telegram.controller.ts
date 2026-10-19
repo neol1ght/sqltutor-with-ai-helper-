@@ -1,5 +1,6 @@
 import {
     Controller,
+    Get,
     Post,
     Req,
     UseGuards,
@@ -21,6 +22,16 @@ export class TelegramController {
     constructor(
         private readonly telegramLinkService: TelegramLinkService,
     ) {}
+
+    @UseGuards(JwtAuthGuard)
+    @Get('link')
+    async getStatus(
+        @Req() req: AuthenticatedRequest,
+    ) {
+        return this.telegramLinkService.getLinkStatus(
+            req.user.id,
+        );
+    }
 
     @UseGuards(JwtAuthGuard)
     @Post('link')

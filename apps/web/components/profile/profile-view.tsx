@@ -8,7 +8,9 @@ import {
     Calendar,
     CheckCircle2,
     Flame,
+    Loader2,
     Lock,
+    Send,
     Target,
     Trophy,
 } from 'lucide-react';
@@ -40,6 +42,13 @@ import {
     updateProfile,
     type ProfileResponse,
 } from '@/lib/api/profile';
+
+import {
+    createTelegramLink,
+    getTelegramStatus,
+    type TelegramLinkResponse,
+    type TelegramStatusResponse,
+} from '@/lib/api/telegram';
 
 import { cn } from '@/lib/utils';
 
@@ -720,6 +729,10 @@ export function ProfileView() {
                         </div>
                     </section>
 
+                    {/* TELEGRAM */}
+
+                    <TelegramSection />
+
                     {/* NOTIFICATIONS */}
 
                     <section
@@ -1101,6 +1114,221 @@ function ProfileAchievements({
                 ),
             )}
         </ul>
+    );
+}
+
+/* ================================================= */
+/* TELEGRAM */
+/* ================================================= */
+
+function formatCountdown(seconds: number) {
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return minutes > 0 ? `${minutes} мин ${rest} с` : `${rest} с`;
+}
+
+function TelegramSection() {
+    const [status, setStatus] = useState<TelegramStatusResponse | null>(null);
+    const [linkData, setLinkData] = useState<TelegramLinkResponse | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [expired, setExpired] = useState(false);
+    const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+
+    const loadStatus = async () => {
+        try {
+            const data = await getTelegramStatus();
+            setStatus(data);
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Не удалось загрузить статус Telegram.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        void loadStatus();
+    }, []);
+
+    // Обратный отсчёт до истечения ссылки.
+    useEffect(() => {
+        if (!linkData) return;
+
+        const expiresAt = new Date(linkData.expiresAt).getTime();
+
+        const tick = window.setInterval(() => {
+            const left = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+            setSecondsLeft(left);
+
+            if (left <= 0) {
+                window.clearInterval(tick);
+                setLinkData(null);
+                setExpired(true);
+            }
+        }, 1000);
+
+        return () => window.clearInterval(tick);
+    }, [linkData]);
+
+    // Периодическая проверка: привязал ли пользователь бота.
+    useEffect(() => {
+        if (!linkData) return;
+
+        const poll = window.setInterval(async () => {
+            try {
+                const data = await getTelegramStatus();
+                setStatus(data);
+
+                if (data.linked) {
+                    setLinkData(null);
+                    window.clearInterval(poll);
+                }
+            } catch {
+                // Ошибки опроса не критичны: попробуем в следующий раз.
+            }
+        }, 4000);
+
+        return () => window.clearInterval(poll);
+    }, [linkData]);
+
+    async function handleCreateLink() {
+        setBusy(true);
+        setError(null);
+        setExpired(false);
+
+        try {
+            const data = await createTelegramLink();
+            setLinkData(data);
+            setSecondsLeft(
+                Math.max(
+                    0,
+                    Math.round(
+                        (new Date(data.expiresAt).getTime() - Date.now()) / 1000,
+                    ),
+                ),
+            );
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Не удалось создать ссылку для привязки.');
+            void loadStatus();
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    const linked = status?.linked ?? false;
+
+    return (
+        <section
+            aria-labelledby="telegram-heading"
+            className="rounded-2xl border border-border bg-card p-6"
+        >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2
+                        id="telegram-heading"
+                        className="flex items-center gap-2 font-semibold"
+                    >
+                        <Send className="size-4 text-primary" aria-hidden="true" />
+                        Telegram
+                    </h2>
+
+                    <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                        Привяжите Telegram-бота, чтобы решать задания и общаться с AI-помощником прямо в мессенджере.
+                    </p>
+                </div>
+
+                {linked ? (
+                    <Badge variant="outline" className="gap-1.5 border-primary/30 text-primary">
+                        <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                        Привязан{status?.username ? `: @${status.username}` : ''}
+                    </Badge>
+                ) : (
+                    !loading && (
+                        <Button
+                            onClick={handleCreateLink}
+                            disabled={busy}
+                        >
+                            {busy ? (
+                                <>
+                                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                                    Создаём ссылку…
+                                </>
+                            ) : (
+                                'Привязать Telegram'
+                            )}
+                        </Button>
+                    )
+                )}
+            </div>
+
+            {error && (
+                <div className="mt-4 rounded-lg border border-destructive/25 bg-destructive/5 px-4 py-3">
+                    <p className="text-sm text-destructive">{error}</p>
+                </div>
+            )}
+
+            {loading && (
+                <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    Проверяем статус привязки…
+                </p>
+            )}
+
+            {linked && (
+                <div className="mt-4 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3">
+                    <p className="text-sm text-primary">
+                        Ваш аккаунт связан с Telegram-ботом. Упражнения и AI-помощник доступны в чате с ботом.
+                    </p>
+                </div>
+            )}
+
+            {expired && !linked && !linkData && (
+                <div className="mt-4 rounded-lg border border-warn/30 bg-warn/10 px-4 py-3">
+                    <p className="text-sm text-warn">
+                        Срок действия ссылки истёк. Нажмите «Привязать Telegram» ещё раз.
+                    </p>
+                </div>
+            )}
+
+            {linkData && (
+                <div className="mt-4 rounded-xl border border-primary/25 bg-primary/5 p-4">
+                    <ol className="space-y-2 text-sm leading-relaxed">
+                        <li className="flex gap-2">
+                            <span className="font-medium text-primary">1.</span>
+                            Нажмите кнопку ниже — откроется чат с ботом.
+                        </li>
+                        <li className="flex gap-2">
+                            <span className="font-medium text-primary">2.</span>
+                            В Telegram нажмите «Начать» (Start).
+                        </li>
+                        <li className="flex gap-2">
+                            <span className="font-medium text-primary">3.</span>
+                            Мы автоматически подтвердим привязку — оставьте эту страницу открытой.
+                        </li>
+                    </ol>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <a
+                            href={linkData.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+                        >
+                            Открыть Telegram-бота
+                        </a>
+
+                        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                            {secondsLeft !== null
+                                ? `Ссылка действует ещё ${formatCountdown(secondsLeft)}`
+                                : 'Ожидаем подтверждение…'}
+                        </span>
+                    </div>
+                </div>
+            )}
+        </section>
     );
 }
 
