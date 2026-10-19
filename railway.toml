@@ -1,0 +1,6 @@
+[build]
+builder = "RAILPACK"
+buildCommand = "pnpm --filter api build"
+
+[deploy]
+startCommand = "pnpm --filter api start:prod"
