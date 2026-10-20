@@ -47,7 +47,7 @@ export function Hero() {
               href="/learn/lesson"
               className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 px-5 text-base' })}
             >
-              Пробный урок без регистрации
+              Продолжить обучение
             </Link>
           </div>
 
