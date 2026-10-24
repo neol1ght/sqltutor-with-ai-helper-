@@ -253,8 +253,8 @@ export function LessonWorkspace() {
     }
 
     return (
-        <div className="flex flex-1 flex-col lg:h-dvh lg:overflow-hidden">
-            <header className="flex items-center gap-4 border-b border-border px-4 py-3 sm:px-6">
+        <div className="flex h-dvh min-h-0 min-w-0 flex-col overflow-hidden">
+            <header className="flex shrink-0 items-center gap-4 border-b border-border px-4 py-3 sm:px-6">
                 <Link href={caseSlug ? `/learn/roadmap/${caseSlug}` : '/learn/roadmap'} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" aria-hidden="true" /><span className="hidden sm:inline">Программа курса</span></Link>
                 <div className="min-w-0 flex-1">
                     <p className="truncate font-mono text-xs text-muted-foreground">{exercise.learningCase?.title ?? 'Практика'} · этап {currentStepIndex >= 0 ? currentStepIndex + 1 : 1}{steps.length ? `/${steps.length}` : ''}</p>
@@ -263,8 +263,8 @@ export function LessonWorkspace() {
                 <span className="hidden rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 font-mono text-xs text-primary sm:inline">{exercise.difficulty}</span>
             </header>
 
-            <div className="grid min-h-0 flex-1 lg:grid-cols-[300px_minmax(0,1fr)_340px]">
-                <aside className="overflow-y-auto border-b border-border p-5 lg:border-b-0 lg:border-r lg:p-6">
+            <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[300px_minmax(0,1fr)_340px] lg:grid-rows-[minmax(0,1fr)]">
+                <aside className="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto border-b border-border p-5 lg:border-b-0 lg:border-r lg:p-6">
                     <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary"><Code2 className="size-3" aria-hidden="true" />Практика</span>
                     <h1 className="mt-3 text-xl font-semibold tracking-tight">{exercise.title}</h1>
                     <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{exercise.description}</p>
@@ -284,7 +284,7 @@ export function LessonWorkspace() {
                     </div>
                 </aside>
 
-                <section className="flex min-h-[560px] min-w-0 flex-col lg:min-h-0">
+                <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
                     <div className="flex items-center justify-between gap-2 border-b border-border bg-code px-4 py-2">
                         <span className="font-mono text-xs text-muted-foreground">solution.sql</span>
                         <div className="flex items-center gap-2">
@@ -298,7 +298,9 @@ export function LessonWorkspace() {
                     {solved && <div className="flex items-center justify-between gap-4 border-t border-primary/30 bg-primary/10 px-4 py-3"><p className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="size-4 text-primary" />Задание решено! Прогресс сохранён.</p>{nextStep && <Button size="sm" disabled={!nextStep.unlocked} onClick={() => openStep(nextStep)}>{nextStep.type === 'LECTURE' ? 'Следующая лекция' : 'Следующее задание'}<ArrowRight data-icon="inline-end" /></Button>}</div>}
                 </section>
 
-                <aside className="flex min-h-[480px] flex-col border-t border-border bg-card/30 lg:min-h-0 lg:border-l lg:border-t-0"><AiHelper key={exercise.id} exerciseId={exercise.id} exerciseTitle={exercise.title} lastResult={result} query={query} /></aside>
+                <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-t border-border bg-card/30 lg:border-l lg:border-t-0">
+                    <AiHelper key={exercise.id} exerciseId={exercise.id} exerciseTitle={exercise.title} lastResult={result} query={query} />
+                </aside>
             </div>
         </div>
     );

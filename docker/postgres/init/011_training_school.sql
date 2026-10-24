@@ -3,7 +3,7 @@
 -- Создание учебной базы данных sqltutor_training_school
 -- ============================================================
 
-CREATE DATABASE sqltutor_training_school OWNER sqltutor;
+CREATE DATABASE sqltutor_training_school OWNER postgres;
 
 \connect sqltutor_training_school
 

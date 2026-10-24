@@ -1,4 +1,4 @@
-CREATE DATABASE sqltutor_training_store OWNER sqltutor;
+CREATE DATABASE sqltutor_training_store OWNER postgres;
 
 \connect sqltutor_training_store
 

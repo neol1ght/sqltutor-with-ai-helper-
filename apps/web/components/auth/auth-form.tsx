@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -11,7 +12,6 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -41,11 +41,9 @@ const COPY: Record<
         switchLink: 'Зарегистрироваться',
         switchHref: '/signup',
     },
-
     signup: {
         title: 'Создайте аккаунт',
-        subtitle:
-            'Начните с бесплатного курса «Основы SQL».',
+        subtitle: 'Начните с бесплатного курса «Основы SQL».',
         cta: 'Создать аккаунт',
         switchText: 'Уже есть аккаунт?',
         switchLink: 'Войти',
@@ -57,6 +55,77 @@ const ACCESS_TOKEN_KEY = 'sqltutor_access_token';
 const REFRESH_TOKEN_KEY = 'sqltutor_refresh_token';
 const USER_KEY = 'sqltutor_user';
 
+const NAME_PATTERN =
+    /^[\p{L}\p{M}]+(?:[ '-][\p{L}\p{M}]+)*$/u;
+
+function validateName(
+    value: string,
+    label: string,
+): string | null {
+    if (value.length < 2 || value.length > 50) {
+        return `${label}: от 2 до 50 символов.`;
+    }
+
+    if (!NAME_PATTERN.test(value)) {
+        return `${label}: используйте только буквы, пробелы, дефис или апостроф.`;
+    }
+
+    return null;
+}
+
+function validatePassword(password: string): string | null {
+    if (password.length < 10 || password.length > 100) {
+        return 'Пароль должен содержать от 10 до 100 символов.';
+    }
+
+    if (!/\p{L}/u.test(password) || !/\d/.test(password)) {
+        return 'Пароль должен содержать хотя бы одну букву и одну цифру.';
+    }
+
+    const normalized = password.toLowerCase().replace(/\s+/g, '');
+
+    const commonPasswords = new Set([
+        'qwerty123',
+        'qwerty12345',
+        '123123123',
+        '123456789',
+        '1234567890',
+        'password123',
+        'admin12345',
+        'qwertyuiop',
+        'пароль123',
+        'пароль12345',
+    ]);
+
+    const sequences = [
+        'qwerty',
+        'asdfgh',
+        'zxcv',
+        'йцукен',
+        'фыва',
+        'ячсм',
+        '12345',
+        '23456',
+        '34567',
+        '45678',
+        '56789',
+        'abcdef',
+        '98765',
+        '87654',
+    ];
+
+    if (
+        commonPasswords.has(normalized) ||
+        /^(.)\1+$/u.test(normalized) ||
+        /^(.{1,4})\1+$/u.test(normalized) ||
+        sequences.some((sequence) => normalized.includes(sequence))
+    ) {
+        return 'Пароль слишком простой. Придумайте более сложный.';
+    }
+
+    return null;
+}
+
 export function AuthForm({
                              mode,
                          }: {
@@ -64,14 +133,9 @@ export function AuthForm({
 }) {
     const router = useRouter();
 
-    const [showPassword, setShowPassword] =
-        useState(false);
-
-    const [pending, setPending] =
-        useState(false);
-
-    const [error, setError] =
-        useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [pending, setPending] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const copy = COPY[mode];
 
@@ -84,9 +148,7 @@ export function AuthForm({
             return;
         }
 
-        const formData = new FormData(
-            e.currentTarget,
-        );
+        const formData = new FormData(e.currentTarget);
 
         const email = String(
             formData.get('email') ?? '',
@@ -98,24 +160,34 @@ export function AuthForm({
 
         const firstName =
             mode === 'signup'
-                ? String(
-                    formData.get('firstName') ?? '',
-                ).trim()
+                ? String(formData.get('firstName') ?? '')
+                    .trim()
+                    .replace(/\s+/g, ' ')
                 : '';
 
         const lastName =
             mode === 'signup'
-                ? String(
-                    formData.get('lastName') ?? '',
-                ).trim()
+                ? String(formData.get('lastName') ?? '')
+                    .trim()
+                    .replace(/\s+/g, ' ')
                 : '';
 
-        if (mode === 'signup' && password.length < 8) {
-            setError(
-                'Пароль должен содержать не менее 8 символов.',
-            );
+        if (mode === 'signup') {
+            const nameError =
+                validateName(firstName, 'Имя') ??
+                validateName(lastName, 'Фамилия');
 
-            return;
+            if (nameError) {
+                setError(nameError);
+                return;
+            }
+
+            const passwordError = validatePassword(password);
+
+            if (passwordError) {
+                setError(passwordError);
+                return;
+            }
         }
 
         setError(null);
@@ -124,15 +196,12 @@ export function AuthForm({
         try {
             const response =
                 mode === 'login'
-                    ? await login(
-                        email,
-                        password,
-                    )
+                    ? await login(email, password)
                     : await register(
                         email,
                         password,
-                        firstName || undefined,
-                        lastName || undefined,
+                        firstName,
+                        lastName,
                     );
 
             localStorage.setItem(
@@ -152,9 +221,9 @@ export function AuthForm({
 
             router.push('/learn');
             router.refresh();
-        } catch (error) {
-            if (error instanceof Error) {
-                setError(error.message);
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err.message);
             } else {
                 setError(
                     mode === 'login'
@@ -193,6 +262,8 @@ export function AuthForm({
                                 name="firstName"
                                 autoComplete="given-name"
                                 required
+                                minLength={2}
+                                maxLength={50}
                                 placeholder="Алексей"
                                 className="h-10"
                             />
@@ -208,6 +279,8 @@ export function AuthForm({
                                 name="lastName"
                                 autoComplete="family-name"
                                 required
+                                minLength={2}
+                                maxLength={50}
                                 placeholder="Иванов"
                                 className="h-10"
                             />
@@ -226,6 +299,7 @@ export function AuthForm({
                         type="email"
                         autoComplete="email"
                         required
+                        maxLength={255}
                         placeholder="you@example.ru"
                         className="h-10"
                     />
@@ -251,11 +325,7 @@ export function AuthForm({
                         <Input
                             id="password"
                             name="password"
-                            type={
-                                showPassword
-                                    ? 'text'
-                                    : 'password'
-                            }
+                            type={showPassword ? 'text' : 'password'}
                             autoComplete={
                                 mode === 'login'
                                     ? 'current-password'
@@ -263,37 +333,29 @@ export function AuthForm({
                             }
                             required
                             minLength={
-                                mode === 'signup'
-                                    ? 8
-                                    : undefined
+                                mode === 'signup' ? 10 : undefined
+                            }
+                            maxLength={
+                                mode === 'signup' ? 100 : undefined
                             }
                             placeholder={
                                 mode === 'signup'
-                                    ? 'Не менее 8 символов'
+                                    ? 'Не менее 10 символов'
                                     : '••••••••'
                             }
                             className="h-10 pr-10"
-                            aria-invalid={
-                                error
-                                    ? true
-                                    : undefined
-                            }
+                            aria-invalid={error ? true : undefined}
                             aria-describedby={
-                                error
-                                    ? 'auth-error'
-                                    : undefined
+                                error ? 'auth-error' : undefined
                             }
                         />
 
                         <button
                             type="button"
                             onClick={() =>
-                                setShowPassword(
-                                    (value) =>
-                                        !value,
-                                )
+                                setShowPassword((value) => !value)
                             }
-                            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground hover:text-foreground"
+                            className="absolute right-0 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
                             aria-label={
                                 showPassword
                                     ? 'Скрыть пароль'
@@ -308,6 +370,14 @@ export function AuthForm({
                         </button>
                     </div>
 
+                    {mode === 'signup' && (
+                        <p className="text-xs text-muted-foreground">
+                            От 10 символов, минимум одна буква
+                            и одна цифра. Простые пароли
+                            не допускаются.
+                        </p>
+                    )}
+
                     {error && (
                         <p
                             id="auth-error"
@@ -318,7 +388,6 @@ export function AuthForm({
                         </p>
                     )}
                 </div>
-                
 
                 <Button
                     type="submit"
@@ -332,7 +401,6 @@ export function AuthForm({
                                 className="animate-spin"
                                 aria-hidden="true"
                             />
-
                             <span className="sr-only">
                                 Отправка…
                             </span>
@@ -340,7 +408,6 @@ export function AuthForm({
                     ) : (
                         <>
                             {copy.cta}
-
                             <ArrowRight
                                 data-icon="inline-end"
                                 aria-hidden="true"

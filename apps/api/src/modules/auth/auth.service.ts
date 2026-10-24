@@ -2,6 +2,7 @@ import {
     ConflictException,
     Injectable,
     UnauthorizedException,
+    BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -17,7 +18,60 @@ export class AuthService {
         private readonly jwtService: JwtService,
     ) {}
 
+
+    private validatePasswordStrength(password: string): void {
+        const normalized = password.toLowerCase().replace(/\s+/g, '');
+
+        const commonPasswords = new Set([
+            'qwerty123',
+            'qwerty12345',
+            '123123123',
+            '123456789',
+            '1234567890',
+            'password123',
+            'admin12345',
+            'qwertyuiop',
+            'пароль123',
+            'пароль12345',
+        ]);
+
+        const predictableSequences = [
+            'qwerty',
+            'asdfgh',
+            'zxcv',
+            'йцукен',
+            'фыва',
+            'ячсм',
+            '12345',
+            '23456',
+            '34567',
+            '45678',
+            '56789',
+            'abcdef',
+            '98765',
+            '87654',
+        ];
+
+        const onlyRepeatedCharacters = /^(.)\1+$/u.test(normalized);
+        const repeatedShortPattern = /^(.{1,4})\1+$/u.test(normalized);
+
+        if (
+            commonPasswords.has(normalized) ||
+            onlyRepeatedCharacters ||
+            repeatedShortPattern ||
+            predictableSequences.some((sequence) =>
+                normalized.includes(sequence),
+            )
+        ) {
+            throw new BadRequestException(
+                'Этот пароль слишком простой. Придумайте более сложный пароль.',
+            );
+        }
+    }
+
+
     async register(dto: RegisterDto) {
+        this.validatePasswordStrength(dto.password)
         const existingUser = await this.prisma.user.findUnique({
             where: {
                 email: dto.email,
