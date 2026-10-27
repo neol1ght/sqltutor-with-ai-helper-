@@ -1,3 +1,6 @@
+
+
+
 -- ============================================================
 -- 011_training_school.sql
 -- Создание учебной базы данных sqltutor_training_school
@@ -94,68 +97,104 @@ CREATE TABLE enrollments (
 
                              CONSTRAINT enrollments_status_check
                                  CHECK (
-                                     status IN (
-                                                'active',
-                                                'completed',
-                                                'dropped'
-                                         )
-                                     ),
 
-                             CONSTRAINT enrollments_student_course_unique
-                                 UNIQUE (student_id, course_id)
+
+
+
+-- ============================================================
+-- 011_training_school.sql
+-- Создание учебной базы данных sqltutor_training_school
+-- ============================================================
+
+                                     CREATE DATABASE sqltutor_training_school OWNER postgres;
+
+\connect sqltutor_training_school
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+
+-- ============================================================
+-- STUDENTS
+-- ============================================================
+
+CREATE TABLE students (
+                          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+                          first_name VARCHAR(100) NOT NULL,
+                          last_name VARCHAR(100) NOT NULL,
+
+                          email VARCHAR(255) NOT NULL UNIQUE,
+
+                          birth_date DATE NOT NULL,
+
+                          city VARCHAR(100) NOT NULL,
+
+                          enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 
 -- ============================================================
--- GRADES
+-- TEACHERS
 -- ============================================================
 
-CREATE TABLE grades (
-                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+CREATE TABLE teachers (
+                          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-                        enrollment_id UUID NOT NULL
-                            REFERENCES enrollments(id)
-                                ON DELETE CASCADE,
+                          first_name VARCHAR(100) NOT NULL,
+                          last_name VARCHAR(100) NOT NULL,
 
-                        grade NUMERIC(5, 2) NOT NULL,
+                          email VARCHAR(255) NOT NULL UNIQUE,
 
-                        graded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                          department VARCHAR(100) NOT NULL,
 
-                        CONSTRAINT grades_value_check
-                            CHECK (grade >= 0 AND grade <= 100)
+                          hired_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 
 -- ============================================================
--- INDEXES
+-- COURSES
 -- ============================================================
 
-CREATE INDEX idx_students_city
-    ON students(city);
+CREATE TABLE courses (
+                         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-CREATE INDEX idx_students_enrolled_at
-    ON students(enrolled_at);
+                         teacher_id UUID REFERENCES teachers(id) ON DELETE SET NULL,
 
-CREATE INDEX idx_teachers_department
-    ON teachers(department);
+                         name VARCHAR(255) NOT NULL,
 
-CREATE INDEX idx_courses_teacher_id
-    ON courses(teacher_id);
+                         department VARCHAR(100) NOT NULL,
 
-CREATE INDEX idx_courses_department
-    ON courses(department);
+                         credits INTEGER NOT NULL,
 
-CREATE INDEX idx_enrollments_student_id
-    ON enrollments(student_id);
+                         price NUMERIC(10, 2) NOT NULL,
 
-CREATE INDEX idx_enrollments_course_id
-    ON enrollments(course_id);
+                         CONSTRAINT courses_credits_check
+                             CHECK (credits > 0),
 
-CREATE INDEX idx_enrollments_status
-    ON enrollments(status);
+                         CONSTRAINT courses_price_check
+                             CHECK (price >= 0)
+);
 
-CREATE INDEX idx_grades_enrollment_id
-    ON grades(enrollment_id);
 
-CREATE INDEX idx_grades_grade
-    ON grades(grade);
+-- ============================================================
+-- ENROLLMENTS
+-- ============================================================
+
+CREATE TABLE enrollments (
+                             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+                             student_id UUID NOT NULL
+                                 REFERENCES students(id)
+                                     ON DELETE CASCADE,
+
+                             course_id UUID NOT NULL
+                                 REFERENCES courses(id)
+                                     ON DELETE CASCADE,
+
+                             enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+                             status VARCHAR(30) NOT NULL DEFAULT 'active',
+
+                             CONSTRAINT enrollments_status_check
+                                 CHECK (
+
