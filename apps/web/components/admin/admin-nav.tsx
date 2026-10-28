@@ -1,5 +1,7 @@
 'use client'
-
+import { useEffect, useState } from 'react'
+import { getCurrentUser } from '@/lib/auth/session'
+import type { AuthUser } from '@/lib/api/auth'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -58,7 +60,14 @@ const NAV = [
 
 export function AdminSidebar() {
     const pathname = usePathname()
+    const [user, setUser] = useState<AuthUser | null>(null)
 
+    useEffect(() => {
+        getCurrentUser().then(setUser).catch(() => setUser(null))
+    }, [])
+
+    const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email || 'Пользователь'
+    const initials = name.slice(0, 1) + (name.split(' ')[1]?.[0] || '')
     return (
         <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-4 py-5 lg:flex">
             <div className="flex items-center justify-between px-2">
@@ -131,13 +140,13 @@ export function AdminSidebar() {
                         className="bg-warn/15"
                     >
                         <AvatarFallback className="bg-transparent text-sm font-semibold text-warn">
-                            АИ
+                            {initials.toUpperCase()}
                         </AvatarFallback>
                     </Avatar>
 
                     <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">
-                            Алексей Иванов
+                            { name }
                         </p>
 
                         <p className="truncate text-xs text-muted-foreground">
