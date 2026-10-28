@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Code2, Play, RotateCcw } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { executeLessonSql, getLessonExercise, getLessonExercises, submitLessonSql, type LessonExercise, type SqlApiResult } from '@/lib/api/lesson';
@@ -45,11 +45,11 @@ function toRunResult(response: SqlApiResult, ms: number, checked: boolean): RunR
 /** Этап маршрута, приведённый к единому виду для навигации. */
 type RouteStep = {
     key: string;
-  type: 'LECTURE' | 'EXERCISE';
-  title: string;
-  lectureSlug: string | null;
-  exerciseId: string | null;
-  unlocked: boolean;
+    type: 'LECTURE' | 'EXERCISE';
+    title: string;
+    lectureSlug: string | null;
+    exerciseId: string | null;
+    unlocked: boolean;
 };
 
 function stepsFromNodes(nodes: RoadmapNode[]): RouteStep[] {
@@ -85,6 +85,37 @@ export function LessonWorkspace() {
     const [loading, setLoading] = useState(true);
     const [running, setRunning] = useState(false);
     const [error, setError] = useState('');
+    const workspaceRef = useRef<HTMLElement>(null);
+    const [editorHeight, setEditorHeight] = useState(360);
+    const [isResizing, setIsResizing] = useState(false);
+
+    function handleResizeStart(e: React.PointerEvent<HTMLDivElement>) {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setIsResizing(true);
+    }
+
+    function handleResizeMove(e: React.PointerEvent<HTMLDivElement>) {
+        if (!isResizing || !workspaceRef.current) return;
+
+        const rect = workspaceRef.current.getBoundingClientRect();
+        const headerHeight = 40;
+        const dividerHeight = 8;
+        const resultsMinHeight = 160;
+        const solvedHeight = solved ? 56 : 0;
+        const maxHeight = Math.max(
+            120,
+            rect.height - headerHeight - dividerHeight - resultsMinHeight - solvedHeight,
+        );
+
+        setEditorHeight(
+            Math.max(120, Math.min(e.clientY - rect.top - headerHeight, maxHeight)),
+        );
+    }
+
+    function handleResizeEnd() {
+        setIsResizing(false);
+    }
 
     // Курс, к которому относится открытый этап (для переходов между лекциями).
     const caseSlug = useMemo(() => exercise?.learningCase?.slug ?? null, [exercise]);
@@ -284,8 +315,13 @@ export function LessonWorkspace() {
                     </div>
                 </aside>
 
-                <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-                    <div className="flex items-center justify-between gap-2 border-b border-border bg-code px-4 py-2">
+                <section
+                    ref={workspaceRef}
+                    className={`flex min-h-0 min-w-0 flex-col overflow-hidden ${
+                        isResizing ? 'select-none' : ''
+                    }`}
+                >
+                    <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-code px-4 py-2">
                         <span className="font-mono text-xs text-muted-foreground">solution.sql</span>
                         <div className="flex items-center gap-2">
                             <Button variant="ghost" size="sm" onClick={resetQuery} disabled={running}><RotateCcw data-icon="inline-start" aria-hidden="true" />Сбросить</Button>
@@ -293,9 +329,61 @@ export function LessonWorkspace() {
                             <Button size="sm" onClick={() => void checkSolution()} disabled={running || !query.trim()}><CheckCircle2 data-icon="inline-start" aria-hidden="true" />{running ? 'Проверяем…' : 'Проверить'}</Button>
                         </div>
                     </div>
-                    <SqlEditor value={query} onChange={setQuery} onRun={run} />
-                    <div className="flex h-72 min-h-56 shrink-0 flex-col overflow-hidden"><ResultsPanel result={result} running={running} /></div>
-                    {solved && <div className="flex items-center justify-between gap-4 border-t border-primary/30 bg-primary/10 px-4 py-3"><p className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="size-4 text-primary" />Задание решено! Прогресс сохранён.</p>{nextStep && <Button size="sm" disabled={!nextStep.unlocked} onClick={() => openStep(nextStep)}>{nextStep.type === 'LECTURE' ? 'Следующая лекция' : 'Следующее задание'}<ArrowRight data-icon="inline-end" /></Button>}</div>}
+
+                    <div
+                        className="min-h-0 min-w-0 shrink-0 overflow-auto"
+                        style={{ height: `${editorHeight}px` }}
+                    >
+                        <SqlEditor value={query} onChange={setQuery} onRun={run} />
+                    </div>
+
+                    <div
+                        role="separator"
+                        aria-label="Изменить высоту редактора и результата"
+                        aria-orientation="horizontal"
+                        aria-valuenow={editorHeight}
+                        tabIndex={0}
+                        className="group relative z-10 flex h-2 shrink-0 cursor-row-resize touch-none items-center justify-center border-y border-border bg-muted/30 hover:bg-primary/10 active:bg-primary/20"
+                        onPointerDown={handleResizeStart}
+                        onPointerMove={handleResizeMove}
+                        onPointerUp={handleResizeEnd}
+                        onPointerCancel={handleResizeEnd}
+                        onLostPointerCapture={handleResizeEnd}
+                        onKeyDown={(e) => {
+                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                setEditorHeight((height) => {
+                                    const available = (workspaceRef.current?.clientHeight ?? 600) - 210;
+                                    const maxHeight = Math.max(120, available);
+                                    return Math.max(
+                                        120,
+                                        Math.min(height + (e.key === 'ArrowUp' ? -20 : 20), maxHeight),
+                                    );
+                                });
+                            }
+                        }}
+                    >
+                        <div className="h-1 w-12 rounded-full bg-muted-foreground/30 transition-colors group-hover:bg-primary/60" />
+                    </div>
+
+                    <div className="min-h-40 min-w-0 flex-1 overflow-hidden">
+                        <ResultsPanel result={result} running={running} />
+                    </div>
+
+                    {solved && (
+                        <div className="flex shrink-0 items-center justify-between gap-4 border-t border-primary/30 bg-primary/10 px-4 py-3">
+                            <p className="flex items-center gap-2 text-sm font-medium">
+                                <CheckCircle2 className="size-4 text-primary" />
+                                Задание решено! Прогресс сохранён.
+                            </p>
+                            {nextStep && (
+                                <Button size="sm" disabled={!nextStep.unlocked} onClick={() => openStep(nextStep)}>
+                                    {nextStep.type === 'LECTURE' ? 'Следующая лекция' : 'Следующее задание'}
+                                    <ArrowRight data-icon="inline-end" />
+                                </Button>
+                            )}
+                        </div>
+                    )}
                 </section>
 
                 <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-t border-border bg-card/30 lg:border-l lg:border-t-0">
