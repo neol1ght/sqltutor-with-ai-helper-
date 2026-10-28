@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowUpRight, BookOpen, Code2, Database, GraduationCap, Users } from 'lucide-react'
+import { ArrowUpRight, Database, GraduationCap, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SectionHeading } from './section-heading'
 
@@ -12,8 +12,11 @@ const databases = [
     href: '/learn/roadmap/online-store',
     icon: Database,
     topics: ['SELECT', 'WHERE', 'ORDER BY', 'JOIN'],
-    tone: 'beginner',
     number: '01',
+    colors: {
+      badge: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+      dot: 'bg-emerald-500',
+    },
   },
   {
     title: 'Университет',
@@ -23,8 +26,11 @@ const databases = [
     href: '/learn/roadmap/university',
     icon: GraduationCap,
     topics: ['GROUP BY', 'HAVING', 'JOIN', 'Подзапросы'],
-    tone: 'intermediate',
     number: '02',
+    colors: {
+      badge: 'border-blue-500/25 bg-blue-500/10 text-blue-600 dark:text-blue-400',
+      dot: 'bg-blue-500',
+    },
   },
   {
     title: 'База ВК',
@@ -34,31 +40,13 @@ const databases = [
     href: '/learn/roadmap/vk-base',
     icon: Users,
     topics: ['CTE', 'Оконные функции', 'Подзапросы', 'Сложные JOIN'],
-    tone: 'advanced',
     number: '03',
+    colors: {
+      badge: 'border-violet-500/25 bg-violet-500/10 text-violet-600 dark:text-violet-400',
+      dot: 'bg-violet-500',
+    },
   },
 ]
-
-const toneClasses = {
-  beginner: {
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/25',
-    text: 'text-emerald-600 dark:text-emerald-400',
-    dot: 'bg-emerald-500',
-  },
-  intermediate: {
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/25',
-    text: 'text-blue-600 dark:text-blue-400',
-    dot: 'bg-blue-500',
-  },
-  advanced: {
-    bg: 'bg-violet-500/10',
-    border: 'border-violet-500/25',
-    text: 'text-violet-600 dark:text-violet-400',
-    dot: 'bg-violet-500',
-  },
-}
 
 export function Tracks() {
   return (
@@ -75,7 +63,6 @@ export function Tracks() {
 
           <div className="mt-8 grid grid-cols-1 items-stretch gap-4 sm:mt-10 sm:grid-cols-2 lg:grid-cols-3">
             {databases.map((database) => {
-              const tone = toneClasses[database.tone]
               const Icon = database.icon
 
               return (
@@ -93,12 +80,15 @@ export function Tracks() {
                     <span
                         className={cn(
                             'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
-                            tone.bg,
-                            tone.border,
-                            tone.text,
+                            database.colors.badge,
                         )}
                     >
-                      <span className={cn('size-1.5 rounded-full', tone.dot)} />
+                      <span
+                          className={cn(
+                              'size-1.5 rounded-full',
+                              database.colors.dot,
+                          )}
+                      />
                       {database.level}
                     </span>
 
@@ -107,13 +97,7 @@ export function Tracks() {
                     </span>
                       </div>
 
-                      <div
-                          className={cn(
-                              'mt-6 flex size-12 items-center justify-center rounded-xl',
-                              tone.bg,
-                              tone.text,
-                          )}
-                      >
+                      <div className="mt-6 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
                         <Icon className="size-6" aria-hidden="true" />
                       </div>
 
@@ -134,7 +118,10 @@ export function Tracks() {
                           Основные темы
                         </p>
 
-                        <ul className="flex flex-wrap gap-1.5" aria-label="Темы базы">
+                        <ul
+                            className="flex flex-wrap gap-1.5"
+                            aria-label="Темы базы"
+                        >
                           {database.topics.map((topic) => (
                               <li
                                   key={topic}
@@ -146,11 +133,15 @@ export function Tracks() {
                         </ul>
                       </div>
 
-                      <div className="mt-6 flex items-center justify-between border-t border-border pt-4 text-sm">
+                      <div className="mt-6 flex items-center justify-between gap-2 border-t border-border pt-4 text-sm">
                         <span className="font-medium">Перейти к обучению</span>
-                        <span className="flex items-center gap-1 text-primary">
+
+                        <span className="flex shrink-0 items-center gap-1 text-primary">
                       Открыть
-                      <ArrowUpRight className="size-4" aria-hidden="true" />
+                      <ArrowUpRight
+                          className="size-4"
+                          aria-hidden="true"
+                      />
                     </span>
                       </div>
                     </Link>
