@@ -43,6 +43,10 @@ const NAV = [
         href: '/#reviews',
         label: 'Отзывы',
     },
+    {
+        href: '/instruction',
+        label: 'Инструкция',
+    },
 ];
 
 export function SiteHeader() {
